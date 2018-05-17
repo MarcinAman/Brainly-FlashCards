@@ -28,6 +28,7 @@
     100% {-moz-transform: rotate(360deg);}
 }
 
-.main-frame{
-    display: none;
+.main-box{
+    margin: auto;
+    width: 50%
 }

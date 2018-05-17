@@ -43,7 +43,7 @@ class Question{
     }
 
     render(){
-        return '<div class="sg-text-bit">'+this.state.question+'</div>' +
+        return '<div class="sg-header-primary sg-header-primary--small">'+this.state.question+'</div>'+
             '<ul class="sg-list">'+this.state.answers.reduce((prev,current) => prev.concat(
                 '<li class="sg-list__element">'+
                     '<div class="sg-list__icon">'+
@@ -115,8 +115,9 @@ class GameWindow{
     render(){
         /*make modal not visible since we have data */
 
-        document.getElementsByClassName('main-frame-modal-loader')[0].style.display = 'none';
-        const element = document.getElementsByClassName('main-frame-box')[0]
+        document.getElementById('main-frame-modal-loader').style.display = 'none';
+
+        const element = document.getElementById('main-frame')
         element.style.display = 'block'
 
         const toRender = this.getNextQuestion()
@@ -142,24 +143,49 @@ class GameWindow{
             }
         }
         else{
-            element.innerHTML = '<div>'+'End'+'</div>'+'<div>'+
-                '<button onclick="applicationState.window.state.content.render()">Try again</button>'+'</div>'
+            element.innerHTML = '<div class="sg-content-box__content sg-content-box__content--spaced-bottom-large">'+
+                '<button class="sg-button-primary sg-button-primary--alt" ' +
+                'onclick="applicationState.window.state.content.render()">Try Again</button></div>'
+
+
             this.state.currentQuestion = 0
         }
     }
 }
 
 class PreviewWindow{
+    constructor(){
+        this.state = {
+            bulletContent: ['Click on answer that You think is correct',
+                            'If the answer was wrong the card will be moved to the end',
+                            'After answering all questions correctly the game will finish',
+                            'Have fun!']
+        }
+    }
+
+    getBulletContentHTML(){
+        return this.state.bulletContent.reduce(
+            (prev,current) => {
+                return prev.concat(
+                    '<li class="sg-list__element"><div class="sg-list__icon"><svg class="sg-icon sg-icon--gray-secondary sg-icon--x18">' +
+                        '<use xlink:href="#icon-plus"></use></svg></div>' +
+                        '<div class="sg-text sg-text--emphasised">'+current+'</div>' +
+                        '</li>')
+            },''
+        )
+    }
+
     render(){
-        /* make visible */
-        const element = document.getElementsByClassName('main-frame-box')[0]
-        element.style.display = 'block'
+        console.log(this.getBulletContentHTML())
+        const element = document.getElementById('main-frame')
 
-        /*hide modal*/
-        document.getElementsByClassName('main-frame-modal-loader')[0].style.display = 'none'
-
-        /*Render button*/
-        element.innerHTML = '<div class="sg-content-box__content sg-content-box__content--spaced-bottom-large">'+
+        /*Render first window content */
+        element.innerHTML = '<h1 class="sg-text-bit sg-text-bit--alt">Brainly Flash cards</h1>'+
+            '<h2 class="sg-header-secondary">Howto:</h2>'
+            + '<ul class="sg-list">'
+            + this.getBulletContentHTML() +
+                '</ul>'
+            +'<div class="sg-content-box__content sg-content-box__content--spaced-bottom-large">'+
             '<button class="sg-button-primary sg-button-primary--alt" onclick="applicationState.window.renderQuestions()" >Play</button></div>'
     }
 }
@@ -167,7 +193,7 @@ class PreviewWindow{
 class App{
     constructor(){
         this.state = {
-            url:'https://gist.githubusercontent.com/vergilius/6d869a7448e405cb52d782120b77b82c/raw/e75dc7c19b918a9f0f5684595899dba2e5ad4f43/history-flashcards.json',
+            url: 'https://gist.githubusercontent.com/vergilius/6d869a7448e405cb52d782120b77b82c/raw/e75dc7c19b918a9f0f5684595899dba2e5ad4f43/history-flashcards.json',
             content: new PreviewWindow()
         }
         this.state.content.render()
