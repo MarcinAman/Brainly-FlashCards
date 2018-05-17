@@ -13,11 +13,10 @@ class Answer {
 }
 
 class Question{
-    constructor(props,isAnswered){
+    constructor(props){
         this.state = {
             question: props.question,
             answers: this.parseAnswers(props.answers),
-            isAnswered: isAnswered,
             currentAnswer:false
         }
     }
@@ -31,7 +30,7 @@ class Question{
     handleAnswer(answerContent){
         this.state.answers.forEach(
             (e) => {
-                if(e.answer === answerContent){
+                if(e.state.answer === answerContent){
                     this.state.currentAnswer = e
                 }
             }
@@ -39,7 +38,15 @@ class Question{
     }
 
     isCorrect(){
-        return this.state.currentAnswer !== undefined && this.state.currentAnswer.correct
+        return this.state.currentAnswer && this.state.currentAnswer.state.correct
+    }
+
+    wasAnswered(){
+        return this.state.answers === false
+    }
+
+    resetAnswer(){
+        this.state.currentAnswer = false
     }
 
     render(){
@@ -76,7 +83,7 @@ class GameWindow{
 
     parseJSON(response){
         return response.map(
-            (e) => new Question(e,false)
+            (e) => new Question(e)
         )
     }
 
@@ -92,16 +99,31 @@ class GameWindow{
     }
 
     handleAnswer(answerContent){
-        this.state.questions[this.state.currentQuestion-1].handleAnswer(answerContent)
+        // console.log('Choose'+answerContent+' for question:'+ this.state.recentlyRendered)
+        this.state.questions[this.state.recentlyRendered].handleAnswer(answerContent)
         this.render()
     }
 
     getNextQuestion(){
+
+        /* #TODO well, should have used sthing like a queue */
+
         let iterator = 0
         for(let a in this.state.questions){
-            if(!this.state.questions[a].isCorrect()){
+            if(!this.state.questions[a].isCorrect() && !this.state.questions[a].wasAnswered()){
                 if(iterator === this.state.currentQuestion){
                     return a
+                }
+                else{
+                    iterator += 1
+                }
+            }
+        }
+
+        for(let b in this.state.questions){
+            if(!this.state.questions[b].isCorrect() && this.state.questions[b].wasAnswered()){
+                if(iterator === this.state.currentQuestion){
+                    return b
                 }
                 else{
                     iterator += 1
@@ -113,6 +135,8 @@ class GameWindow{
     }
 
     render(){
+        console.log(this.state)
+
         /*make modal not visible since we have data */
 
         document.getElementById('main-frame-modal-loader').style.display = 'none';
@@ -124,7 +148,7 @@ class GameWindow{
 
         if(toRender !== undefined){
             /* and render another element */
-            this.state.recentlyRendered = toRender
+            this.state.recentlyRendered = parseInt(toRender)
 
             element.innerHTML = '<div>'+this.state.questions[toRender].render()+'</div>'
 
@@ -142,13 +166,20 @@ class GameWindow{
                 })
             }
         }
-        else{
-            element.innerHTML = '<div class="sg-content-box__content sg-content-box__content--spaced-bottom-large">'+
-                '<button class="sg-button-primary sg-button-primary--alt" ' +
+        else if(toRender === undefined && this.state.currentQuestion === 0){
+            element.innerHTML = '<h1 class="sg-text-bit sg-text-bit--alt">Congratulations!</h1>'
+                +'<h2 class="sg-header-secondary">You have answered all questions correctly</h2>'
+                +'<div class="sg-content-box__content sg-content-box__content--spaced-bottom-large">'+
+                '<button class="sg-button-primary sg-button-primary--alt" ' + '<br><br>'+
                 'onclick="applicationState.window.state.content.render()">Try Again</button></div>'
 
-
+            this.state.questions.forEach(
+                (e) => e.resetAnswer()
+            )
+        }
+        else{
             this.state.currentQuestion = 0
+            this.render()
         }
     }
 }
@@ -176,7 +207,6 @@ class PreviewWindow{
     }
 
     render(){
-        console.log(this.getBulletContentHTML())
         const element = document.getElementById('main-frame')
 
         /*Render first window content */
@@ -192,6 +222,7 @@ class PreviewWindow{
 
 class App{
     constructor(){
+        /* #TODO display modal while questions are fetching */
         this.state = {
             url: 'https://gist.githubusercontent.com/vergilius/6d869a7448e405cb52d782120b77b82c/raw/e75dc7c19b918a9f0f5684595899dba2e5ad4f43/history-flashcards.json',
             content: new PreviewWindow()
