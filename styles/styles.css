@@ -1,7 +1,5 @@
-.main-frame-modal-loader{
-    position: absolute;
-    top: 40%;
-    left: 50%;
+#main-frame-modal-loader{
+    display: none;
     z-index: 1;
     border: 5px solid transparent;
     border-radius: 50%;
@@ -28,7 +26,7 @@
     100% {-moz-transform: rotate(360deg);}
 }
 
-.main-box{
+.center{
     margin: auto;
-    width: 50%
+    width: 90%
 }

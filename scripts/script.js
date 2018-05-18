@@ -1,3 +1,23 @@
+class Queue{
+    constructor(){
+        this.state = {
+            content: [],
+            head: undefined
+        }
+    }
+
+    push(value){
+        this.state.content.push(value)
+    }
+
+    pop(){
+        if(this.state.content.length < 1){
+            return undefined
+        }
+        this.state.head = this.state.content.shift()
+        return this.state.head
+    }
+}
 
 class Answer {
     constructor(props){
@@ -41,13 +61,6 @@ class Question{
         return this.state.currentAnswer && this.state.currentAnswer.state.correct
     }
 
-    wasAnswered(){
-        return this.state.answers === false
-    }
-
-    resetAnswer(){
-        this.state.currentAnswer = false
-    }
 
     render(){
         return '<div class="sg-header-primary sg-header-primary--small">'+this.state.question+'</div>'+
@@ -67,15 +80,12 @@ class Question{
 class GameWindow{
     constructor(url){
         this.state = {
+            questions: new Queue(),
+            currentQuestion: 0,
+            recentlyRendered: 0,
         }
 
-        this.fetchRequest(url).then((e) => this.parseJSON(e)).then(
-            (e) => (this.state = {
-                questions: e,
-                currentQuestion: 0,
-                recentlyRendered: 0
-            })
-        )
+        this.fetchRequest(url).then((e) => this.parseJSON(e))
             .then(
                 () => this.render()
             )
@@ -83,7 +93,7 @@ class GameWindow{
 
     parseJSON(response){
         return response.map(
-            (e) => new Question(e)
+            (e) => this.state.questions.push(new Question(e))
         )
     }
 
@@ -98,45 +108,41 @@ class GameWindow{
         )
     }
 
+    renderAnswer(type,color){
+        const element = document.getElementById('main-frame')
+
+        let html = ''
+        if(color === 'red'){
+            html = '<div class="sg-text-bit sg-text-bit--small sg-text-bit--warning center">'+type+'</div>'
+        }
+        else{
+            html = '<div class="sg-text-bit sg-text-bit--small center">'+type+'</div>'
+        }
+
+        element.innerHTML = html
+
+        setTimeout(()=>{
+            this.render()
+        },750) //0.5s should be fine
+    }
+
     handleAnswer(answerContent){
-        // console.log('Choose'+answerContent+' for question:'+ this.state.recentlyRendered)
-        this.state.questions[this.state.recentlyRendered].handleAnswer(answerContent)
-        this.render()
+        this.state.recentlyRendered.handleAnswer(answerContent)
+        if(!this.state.recentlyRendered.isCorrect()) {
+            this.state.questions.push(this.state.recentlyRendered)
+            this.renderAnswer('Wrong ;(','red')
+        }
+        else{
+            this.renderAnswer('Correct!','green')
+        }
     }
 
     getNextQuestion(){
-
-        /* #TODO well, should have used sthing like a queue */
-
-        let iterator = 0
-        for(let a in this.state.questions){
-            if(!this.state.questions[a].isCorrect() && !this.state.questions[a].wasAnswered()){
-                if(iterator === this.state.currentQuestion){
-                    return a
-                }
-                else{
-                    iterator += 1
-                }
-            }
-        }
-
-        for(let b in this.state.questions){
-            if(!this.state.questions[b].isCorrect() && this.state.questions[b].wasAnswered()){
-                if(iterator === this.state.currentQuestion){
-                    return b
-                }
-                else{
-                    iterator += 1
-                }
-            }
-        }
-
-        return undefined
+        this.state.recentlyRendered = this.state.questions.pop()
+        return this.state.recentlyRendered
     }
 
     render(){
-        console.log(this.state)
-
         /*make modal not visible since we have data */
 
         document.getElementById('main-frame-modal-loader').style.display = 'none';
@@ -148,11 +154,8 @@ class GameWindow{
 
         if(toRender !== undefined){
             /* and render another element */
-            this.state.recentlyRendered = parseInt(toRender)
 
-            element.innerHTML = '<div>'+this.state.questions[toRender].render()+'</div>'
-
-            this.state.currentQuestion += 1
+            element.innerHTML = '<div>'+toRender.render()+'</div>'
 
             /* Adding a on click event to answers */
 
@@ -166,20 +169,14 @@ class GameWindow{
                 })
             }
         }
-        else if(toRender === undefined && this.state.currentQuestion === 0){
-            element.innerHTML = '<h1 class="sg-text-bit sg-text-bit--alt">Congratulations!</h1>'
+        else{
+            element.innerHTML = '<h1 class="sg-text-bit sg-text-bit--alt">You are the best!</h1>'
                 +'<h2 class="sg-header-secondary">You have answered all questions correctly</h2>'
                 +'<div class="sg-content-box__content sg-content-box__content--spaced-bottom-large">'+
-                '<button class="sg-button-primary sg-button-primary--alt" ' + '<br><br>'+
-                'onclick="applicationState.window.state.content.render()">Try Again</button></div>'
+                '<br><br>'+
+                '<button class="sg-button-primary sg-button-primary--alt"'+
+                'onclick="applicationState.window.renderQuestions()">Try Again</button></div>'
 
-            this.state.questions.forEach(
-                (e) => e.resetAnswer()
-            )
-        }
-        else{
-            this.state.currentQuestion = 0
-            this.render()
         }
     }
 }
@@ -210,11 +207,11 @@ class PreviewWindow{
         const element = document.getElementById('main-frame')
 
         /*Render first window content */
-        element.innerHTML = '<h1 class="sg-text-bit sg-text-bit--alt">Brainly Flash cards</h1>'+
+        element.innerHTML = '<h1 class="sg-text-bit sg-text-bit--alt">Brainly Flash cards</h1><br>'+
             '<h2 class="sg-header-secondary">Howto:</h2>'
             + '<ul class="sg-list">'
             + this.getBulletContentHTML() +
-                '</ul>'
+                '</ul><br>'
             +'<div class="sg-content-box__content sg-content-box__content--spaced-bottom-large">'+
             '<button class="sg-button-primary sg-button-primary--alt" onclick="applicationState.window.renderQuestions()" >Play</button></div>'
     }
@@ -222,7 +219,6 @@ class PreviewWindow{
 
 class App{
     constructor(){
-        /* #TODO display modal while questions are fetching */
         this.state = {
             url: 'https://gist.githubusercontent.com/vergilius/6d869a7448e405cb52d782120b77b82c/raw/e75dc7c19b918a9f0f5684595899dba2e5ad4f43/history-flashcards.json',
             content: new PreviewWindow()
@@ -234,7 +230,13 @@ class App{
         this.state.content.handleAnswer(answerContent)
     }
 
+    renderModal(){
+        document.getElementById('main-frame').style.display = 'none'
+        document.getElementById('main-frame-modal-loader').style.display = 'block'
+    }
+
     renderQuestions(){
+        this.renderModal()
         this.state.content = new GameWindow(this.state.url)
     }
 
@@ -242,7 +244,6 @@ class App{
         this.state.content.render()
     }
 }
-
 
 const applicationState = {
     window: new App()
