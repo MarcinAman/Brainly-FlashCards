@@ -30,3 +30,7 @@
     margin: auto;
     width: 90%
 }
+
+.answerContent:hover{
+    cursor: pointer;
+}
